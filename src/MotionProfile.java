@@ -6,6 +6,7 @@ public class MotionProfile
 {
     private double acceleration;
     private double robot_max_velocity;
+    private double deceleration;
 
     private double timeToCruise;
     private double cruiseTime;
@@ -15,24 +16,27 @@ public class MotionProfile
     private double cruiseDistance;
     private double decelDistance;
 
+    public double totalTime;
+
     private double v_cruise;
 
-    public MotionProfile(double acceleration, double robot_max_velocity)
+    public MotionProfile(double acceleration, double robot_max_velocity, double deceleration)
     {
         this.acceleration = acceleration;
         this.robot_max_velocity = robot_max_velocity;
+        this.deceleration = deceleration;
     }
 
 
-    public void driveToDistance(double distance)
+    public void calculatePointsForDistance(double distance)
     {
         v_cruise = Math.min(robot_max_velocity, calcTheoMax(distance));
 
         timeToCruise = v_cruise / acceleration;
-        timeToStop = v_cruise / acceleration;
+        timeToStop = Math.abs(v_cruise / deceleration);
 
         accelDistance = (.5)*acceleration*(timeToCruise*timeToCruise);
-        decelDistance = (.5)*acceleration*(timeToStop*timeToStop);
+        decelDistance = Math.abs((.5)*deceleration*(timeToStop*timeToStop));
         cruiseDistance = distance - (accelDistance+decelDistance);
 
         cruiseTime = cruiseDistance/v_cruise;
@@ -47,49 +51,55 @@ public class MotionProfile
                 "\nCruise Time:\t\t "     +  cruiseTime     +
                 "\nTime to Stop:\t\t "    +  timeToStop     +
                 "\nAccel Distance:\t\t "  +  accelDistance  +
-                "\nCruise Distance:\t " +  cruiseDistance +
+                "\nCruise Distance:\t "   +  cruiseDistance +
                 "\nDecel Distance:\t\t "  +  decelDistance);
+
+        totalTime = timeToCruise+cruiseTime+timeToStop;
     }
 
     public double calcTheoMax(double distance)
     {
-        return Math.sqrt(2*acceleration*(distance));
+        return 2*acceleration*(distance);
     }
 
-
-    public double getTimeToCruise()
+    public double[] getValuesAtTime(double time)
     {
-        return timeToCruise;
-    }
+        /** Given time will output an array of 4 values in the following order
+         *  arr[0] = time at setpoint
+         *  arr[1] = position at time
+         *  arr[2] = velocity at time
+         *  arr[3] = acceleration
+         */
 
-    public double getCruiseTime()
-    {
-        return cruiseTime;
-    }
+        double[] arr = new double[4];
 
-    public double getTimeToStop()
-    {
-        return timeToStop;
-    }
+        arr[0] = time;
 
-    public double getAccelDistance()
-    {
-        return accelDistance;
-    }
+        if(time < timeToCruise && time >= 0)
+        {
+            arr[1] = time*(v_cruise/2);
+            arr[2] = acceleration*time;
+            arr[3] = acceleration;
+        }
+        else if(time >= timeToCruise && time <= (timeToCruise + cruiseTime))
+        {
+            arr[1] = (acceleration*timeToCruise*timeToCruise) + acceleration*(time-timeToCruise)*(time-timeToCruise);
+            arr[2] = v_cruise;
+            arr[3] = 0;
+        }
+        else if(time > timeToCruise+cruiseTime && time <= timeToCruise+cruiseTime+timeToStop)
+        {
+            arr[1] = accelDistance+cruiseDistance+(time*(v_cruise/2));
+            arr[2] = v_cruise+((time-(timeToCruise+cruiseTime))*deceleration);
+            arr[3] = deceleration;
+        }
+        else
+        {
+            arr[1] = 0;
+            arr[2] = 0;
+            arr[3] = 0;
+        }
 
-    public double getCruiseDistance()
-    {
-        return cruiseDistance;
+        return arr;
     }
-
-    public double getDecelDistance()
-    {
-        return decelDistance;
-    }
-
-    public double getV_cruise()
-    {
-        return v_cruise;
-    }
-
 }
