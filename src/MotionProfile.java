@@ -77,19 +77,24 @@ public class MotionProfile
 
         if(time < timeToCruise && time >= 0)
         {
-            arr[1] = time*(v_cruise/2);
+            arr[1] = (0.5)*acceleration*time*time;
             arr[2] = acceleration*time;
             arr[3] = acceleration;
         }
         else if(time >= timeToCruise && time <= (timeToCruise + cruiseTime))
         {
-            arr[1] = (acceleration*timeToCruise*timeToCruise) + acceleration*(time-timeToCruise)*(time-timeToCruise);
+            //arr[1] = (0.5)*(acceleration*timeToCruise*timeToCruise) + v_cruise*(time-timeToCruise) + timeToCruise*(v_cruise/2);
+            arr[1] = (time-timeToCruise) * v_cruise + (0.5)*(acceleration*timeToCruise*timeToCruise);
             arr[2] = v_cruise;
             arr[3] = 0;
         }
         else if(time > timeToCruise+cruiseTime && time <= timeToCruise+cruiseTime+timeToStop)
         {
-            arr[1] = accelDistance+cruiseDistance+(time*(v_cruise/2));
+            double decel_start_time = (timeToCruise+cruiseTime);
+            //arr[1] = accelDistance+cruiseDistance+((time-(timeToCruise+cruiseTime))*(v_cruise/2));
+            arr[1] = (0.5)*deceleration*(time-decel_start_time)*(time-decel_start_time)
+                    + v_cruise*(time-decel_start_time)
+                    + (cruiseTime) * v_cruise + ((0.5)*(acceleration*timeToCruise*timeToCruise));
             arr[2] = v_cruise+((time-(timeToCruise+cruiseTime))*deceleration);
             arr[3] = deceleration;
         }
